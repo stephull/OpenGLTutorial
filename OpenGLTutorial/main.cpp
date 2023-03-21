@@ -2,13 +2,20 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <random>
 
 void print_shader_error(const char*, char*);
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void key_callback(GLFWwindow*, int, int, int, int);
+std::vector<float> randomFloats(void);
 
 const char* vertexShaderSource;
 const char* fragmentShaderSource;
+
+std::vector<float> rgb;
+float redValueBg;
+float greenValueBg;
+float blueValueBg;
 
 int main(void) {
 	std::cout << "Hello, world!" << std::endl;
@@ -59,12 +66,12 @@ int main(void) {
 		"void main()\n"
 		"{\n"
 		"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-		"}\0";
+		"}\n\0";
 	fragmentShaderSource = "#version 330 core\n"
 		"out vec4 FragColor;\n"
 		"void main()\n"
 		"{\n"
-		"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+		"   FragColor = vec4(0.0f, 0.5f, 0.2f, 1.0f);\n"
 		"}\n\0";
 
 	int success;
@@ -100,50 +107,90 @@ int main(void) {
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
-	float vertices[] = {
-		-0.5f, -0.5f, 1.0f,
+	rgb = randomFloats();
+	redValueBg = rgb[0];
+	greenValueBg = rgb[1];
+	blueValueBg = rgb[2];
+
+	float triangle1[] = {
+		0.0f, 0.0f, 0.0f,
+		-0.5f, -0.5f, 0.0f,
+		-0.5f, 0.5f, 0.0f,
+	};
+	float triangle2[] = {
+		0.0f, 0.0f, 0.0f,
 		0.5f, -0.5f, 0.0f,
-		0.0f, 0.5f, -1.0f
+		0.5f, 0.5f, 0.0f
 	};
-	unsigned int indices[] = {
-		0, 1, 3,
-		1, 2, 3
+	float triangle3[] = {
+		0.0f, 0.5f, 0.0f,
+		-0.5f, 1.0f, 0.0f,
+		0.5f, 1.0f, 0.0f
 	};
 
-	unsigned int VBO, VAO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	glBindVertexArray(VAO);
+	float indices1[] = {
+		0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f
+	};
+	float indices2[] = {
+		0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f
+	};
+	float indices3[] = {
+		0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f
+	};
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	unsigned int VBO[3], VAO[3], EBO[3];
+	glGenVertexArrays(3, VAO);
+	glGenBuffers(3, VBO);
+	glGenBuffers(3, EBO);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
+	glBindVertexArray(VAO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle1), triangle1, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[0]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices1), indices1, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+	glBindVertexArray(VAO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2), triangle2, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices2), indices2, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(VAO[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle3), triangle3, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices3), indices3, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
 
 	while (!glfwWindowShouldClose(window)) {
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(redValueBg, greenValueBg, blueValueBg, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO);
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(VAO[0]);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(VAO[1]);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindVertexArray(VAO[2]);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
 
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
+	glDeleteVertexArrays(3, VAO);
+	glDeleteBuffers(3, VBO);
+	glDeleteBuffers(3, EBO);
+
 	glDeleteProgram(shaderProgram);
 
 	glfwTerminate();
@@ -164,13 +211,18 @@ void key_callback(GLFWwindow* w, int key, int scancode, int action, int mods) {
 	}
 
 	const char* key_msg;
+
 	switch (key) {
 		case GLFW_KEY_ESCAPE:
 			glfwSetWindowShouldClose(w, true);
 			key_msg = "Pressed escape key, program will now terminate.";
 			break;
 		case GLFW_KEY_SPACE:
-			key_msg = "Pressed space key...";
+			key_msg = "Pressed space key, color of background has now changed.";
+			rgb = randomFloats();
+			redValueBg = rgb[0];
+			greenValueBg = rgb[1];
+			blueValueBg = rgb[2];
 			break;
 		default:
 			key_msg = "Unknown key event detected.";
@@ -178,4 +230,24 @@ void key_callback(GLFWwindow* w, int key, int scancode, int action, int mods) {
 	}
 
 	std::cout << key_msg << std::endl;
+}
+
+std::vector<float> randomFloats(void) {
+	const int rgbLimit = 3;
+	static std::default_random_engine e;
+	static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+	std::vector<float> ret;
+	for (int i = 0; i < rgbLimit; i++) {
+		float rand = dist(e);
+		ret.emplace_back(rand);
+	}
+
+	std::cout << "RGB COLORS: ";
+	for (auto& i : ret) {
+		std::cout << i << " ";
+	}
+	std::cout << std::endl;
+
+	return ret;
 }
