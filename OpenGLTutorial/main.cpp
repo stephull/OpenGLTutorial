@@ -3,35 +3,51 @@
 
 #include <iostream>
 #include <random>
+#include <map>
+#include <deque>
 
+using namespace std;
+
+const char* print_shader_src(const char*);
 void print_shader_error(const char*, char*);
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void key_callback(GLFWwindow*, int, int, int, int);
-std::vector<float> randomFloats(void);
+vector<float> randomFloats(void);
 
-const char* vertexShaderSource;
-const char* fragmentShaderSource;
+const char* vertexShaderSource = "#version 330 core\n"
+	"layout (location = 0) in vec3 aPos;\n"
+	"void main()\n"
+	"{\n"
+	"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+	"}\n\0";
 
-std::vector<float> rgb;
-float redValueBg;
-float greenValueBg;
-float blueValueBg;
+vector<const char*> fragmentSources;
+deque<unsigned int> fragmentShaders;
+vector<unsigned int> shaderPrograms;
+
+vector<float*> triangles;
+vector<float*> indices;
+
+vector<float> rgb;
+float redValueBg, greenValueBg, blueValueBg;
+
+map<const char*, const char*> shaderTypes;
 
 int main(void) {
-	std::cout << "Hello, world!" << std::endl;
+	cout << "Hello, world!\n" << endl;
 
 	GLFWwindow* window;
-	const unsigned int winW = 800;
-	const unsigned int winH = 450;
+	const unsigned int winW = 1280;
+	const unsigned int winH = 720;
 	const char* title = "OpenGLTest";
 
 	bool init = glfwInit();
 	if (!init) {
 		const char* err_msg = "Failed to open program.";
-		std::cout << err_msg << std::endl;
-
+		cout << err_msg << endl;
 		exit(EXIT_FAILURE);
 	}
+
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -43,7 +59,7 @@ int main(void) {
 	window = glfwCreateWindow(winW, winH, title, nullptr, nullptr);
 	if (!window) {
 		const char* err_msg = "Failed to create a new GLFW window.";
-		std::cout << err_msg << std::endl;
+		cout << err_msg << endl;
 
 		glfwTerminate();
 		exit(EXIT_FAILURE);
@@ -56,23 +72,23 @@ int main(void) {
 	GLADloadproc addr = (GLADloadproc)glfwGetProcAddress;
 	if (!gladLoadGLLoader(addr)) {
 		const char* err_msg = "Failed to initialize GLAD";
-		std::cout << err_msg << std::endl;
-
+		cout << err_msg << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	vertexShaderSource = "#version 330 core\n"
-		"layout (location = 0) in vec3 aPos;\n"
-		"void main()\n"
-		"{\n"
-		"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-		"}\n\0";
-	fragmentShaderSource = "#version 330 core\n"
-		"out vec4 FragColor;\n"
-		"void main()\n"
-		"{\n"
-		"   FragColor = vec4(0.0f, 0.5f, 0.2f, 1.0f);\n"
-		"}\n\0";
+	const unsigned int numOfColors = 5;
+	const char* colors[numOfColors] = { "RED", "BLUE", "GREEN", "BLACK", "WHITE" };
+	for (int i = 0; i < numOfColors; i++) {
+		const char* color = colors[i];
+		const char* temp = print_shader_src(color);
+		if (!temp) {
+			const char* err_msg = "Failed to render color scheme for fragments.";
+			cout << err_msg << endl;
+			exit(EXIT_FAILURE);
+		}
+		fragmentSources.push_back(temp);
+		//cout << "1:" << temp << endl;
+	}
 
 	int success;
 	char infoLog[512];
@@ -86,119 +102,176 @@ int main(void) {
 		print_shader_error("VERTEX::COMPILATION_FAILED", infoLog);
 	}
 
-	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-	glCompileShader(fragmentShader);
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
-		print_shader_error("FRAGMENT::COMPILATION_FAILED", infoLog);
+	for (int i = 0; i < fragmentSources.size(); i++) {
+		unsigned int fShader = glCreateShader(GL_FRAGMENT_SHADER);
+		const GLchar* fSource = (const GLchar*)fragmentSources.at(i);
+		
+		glShaderSource(fShader, 1, &fSource, nullptr);
+		glCompileShader(fShader);
+		glGetShaderiv(fShader, GL_COMPILE_STATUS, &success);
+		if (!success) {
+			glGetShaderInfoLog(fShader, 512, nullptr, infoLog);
+			print_shader_error("FRAGMENT::COMPILATION_FAILED", infoLog);
+		}
+
+		fragmentShaders.push_back(fShader);
+		//cout << "2:" << fShader << endl;
 	}
 
-	unsigned int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-		print_shader_error("PROGRAM::LINKING_FAILED", infoLog);
+	for (int j = 0; j < fragmentShaders.size(); j++) {
+		unsigned int prog = glCreateProgram();
+		GLuint fShader = fragmentShaders.at(j);
+		
+		glAttachShader(prog, vertexShader);
+		glAttachShader(prog, fShader);
+		glLinkProgram(prog);
+		glGetProgramiv(prog, GL_LINK_STATUS, &success);
+		if (!success) {
+			glGetProgramInfoLog(prog, 512, nullptr, infoLog);
+			print_shader_error("PROGRAM::LINKING_FAILED", infoLog);
+		}
+
+		shaderPrograms.push_back(prog);
+		//cout << "3:" << prog << endl;
+		glDeleteShader(fShader);
+		fragmentShaders.pop_front();
 	}
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
 
 	rgb = randomFloats();
-	redValueBg = rgb[0];
-	greenValueBg = rgb[1];
-	blueValueBg = rgb[2];
+	redValueBg = rgb.at(0);
+	greenValueBg = rgb.at(1);
+	blueValueBg = rgb.at(2);
 
-	float triangle1[] = {
+	float t1[9] = {
 		0.0f, 0.0f, 0.0f,
 		-0.5f, -0.5f, 0.0f,
 		-0.5f, 0.5f, 0.0f,
-	};
-	float triangle2[] = {
+	}, t2[9] = {
 		0.0f, 0.0f, 0.0f,
 		0.5f, -0.5f, 0.0f,
 		0.5f, 0.5f, 0.0f
-	};
-	float triangle3[] = {
+	}, t3[9] = {
 		0.0f, 0.5f, 0.0f,
 		-0.5f, 1.0f, 0.0f,
 		0.5f, 1.0f, 0.0f
+	}, t4[9] = {
+		0.0f, -0.5f, 0.0f,
+		-0.5f, -1.0f, 0.0f,
+		-0.0f, -1.0f, 0.0f
+	}, t5[9] = {
+		0.0f, -0.5f, 0.0f,
+		0.5f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f
 	};
+	triangles = {t1, t2, t3, t4, t5};
 
-	float indices1[] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f
+	float i1[6] = {
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+	}, i2[6] = {
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+	}, i3[6] = {
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+	}, i4[6] = {
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+	}, i5[6] = {
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
 	};
-	float indices2[] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f
-	};
-	float indices3[] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f
-	};
+	indices = { i1, i2, i3, i4, i5 };
 
-	unsigned int VBO[3], VAO[3], EBO[3];
-	glGenVertexArrays(3, VAO);
-	glGenBuffers(3, VBO);
-	glGenBuffers(3, EBO);
+	unsigned int VBO[5], VAO[5], EBO[5];
+	glGenVertexArrays(5, VAO);
+	glGenBuffers(5, VBO);
+	glGenBuffers(5, EBO);
 
-	glBindVertexArray(VAO[0]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle1), triangle1, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[0]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices1), indices1, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	for (int a = 0; a < sizeof(VAO) / sizeof(VAO[0]); a++) {
+		glBindVertexArray(VAO[a]);
 
-	glBindVertexArray(VAO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2), triangle2, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices2), indices2, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glBindVertexArray(VAO[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle3), triangle3, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[2]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices3), indices3, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+		float* t = triangles.at(a);
+		//cout << "4:" << t << endl;
+		glBindBuffer(GL_ARRAY_BUFFER, VBO[a]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(t), t, GL_STATIC_DRAW);
+		
+		float* i = indices.at(a);
+		//cout << "5:" << i << endl;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[a]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(i), i, GL_STATIC_DRAW);
+		
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+	}
 
 	while (!glfwWindowShouldClose(window)) {
 		glClearColor(redValueBg, greenValueBg, blueValueBg, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO[0]);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(VAO[1]);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glBindVertexArray(VAO[2]);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		for (
+			int i = 0, j = 0; 
+			i < shaderPrograms.size() && j < sizeof(VAO)/sizeof(VAO[0]);
+			i++, j++
+		) {
+			glUseProgram(shaderPrograms.at(i));
+			glBindVertexArray(VAO[j]);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
 
-		glfwPollEvents();
 		glfwSwapBuffers(window);
+		glfwPollEvents();
 	}
 
 	glDeleteVertexArrays(3, VAO);
 	glDeleteBuffers(3, VBO);
 	glDeleteBuffers(3, EBO);
 
-	glDeleteProgram(shaderProgram);
+	for (int i = shaderPrograms.size()-1; i >= 0; i--) {
+		glDeleteProgram(shaderPrograms.at(i));
+		shaderPrograms.erase(shaderPrograms.begin() + i);
+	}
+
+	cout << "\nThank you for using this program. Goodbye!" << endl;
 
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
 }
 
+const char* print_shader_src(const char* color) {
+	shaderTypes["WHITE"] = "#version 330 core\n"
+		"out vec4 FragColor;\n"
+		"void main()\n"
+		"{\n"
+		"   FragColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+		"}\n\0";
+	shaderTypes["RED"] = "#version 330 core\n"
+		"out vec4 FragColor;\n"
+		"void main()\n"
+		"{\n"
+		"   FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
+		"}\n\0";
+	shaderTypes["GREEN"] = "#version 330 core\n"
+		"out vec4 FragColor;\n"
+		"void main()\n"
+		"{\n"
+		"   FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);\n"
+		"}\n\0";
+	shaderTypes["BLUE"] = "#version 330 core\n"
+		"out vec4 FragColor;\n"
+		"void main()\n"
+		"{\n"
+		"   FragColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);\n"
+		"}\n\0";
+	shaderTypes["BLACK"] = "#version 330 core\n"
+		"out vec4 FragColor;\n"
+		"void main()\n"
+		"{\n"
+		"   FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+		"}\n\0";
+
+	return shaderTypes.count(color) 
+		? shaderTypes[color] 
+		: nullptr;
+}
+
 void print_shader_error(const char* s, char* log) {
-	std::cout << "ERROR::SHADER::" << s << '\n' << log << std::endl;
+	cout << "ERROR::SHADER::" << s << '\n' << log << endl;
 }
 
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
@@ -220,34 +293,34 @@ void key_callback(GLFWwindow* w, int key, int scancode, int action, int mods) {
 		case GLFW_KEY_SPACE:
 			key_msg = "Pressed space key, color of background has now changed.";
 			rgb = randomFloats();
-			redValueBg = rgb[0];
-			greenValueBg = rgb[1];
-			blueValueBg = rgb[2];
+			redValueBg = rgb.at(0);
+			greenValueBg = rgb.at(1);
+			blueValueBg = rgb.at(2);
 			break;
 		default:
 			key_msg = "Unknown key event detected.";
 			break;
 	}
 
-	std::cout << key_msg << std::endl;
+	cout << key_msg << endl;
 }
 
-std::vector<float> randomFloats(void) {
+vector<float> randomFloats(void) {
 	const int rgbLimit = 3;
 	static std::default_random_engine e;
 	static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-	std::vector<float> ret;
+	vector<float> ret;
 	for (int i = 0; i < rgbLimit; i++) {
 		float rand = dist(e);
 		ret.emplace_back(rand);
 	}
 
-	std::cout << "RGB COLORS: ";
+	cout << "RGB COLORS: ";
 	for (auto& i : ret) {
-		std::cout << i << " ";
+		cout << i << " ";
 	}
-	std::cout << std::endl;
+	cout << endl;
 
 	return ret;
 }
