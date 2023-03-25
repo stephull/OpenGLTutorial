@@ -6,11 +6,15 @@
 
 #include <iostream>
 #include <random>
+#include <string>
+#include <vector>
+#include <stddef.h>
 
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void key_callback(GLFWwindow*, int, int, int, int);
+void cursor_pos_callback(GLFWwindow*, double, double);
 vector<float> random_floats(void);
 
 vector<float> rgb;
@@ -49,7 +53,9 @@ int main(void) {
 
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetCursorPosCallback(window, cursor_pos_callback);
 
 	GLADloadproc addr = (GLADloadproc)glfwGetProcAddress;
 	if (!gladLoadGLLoader(addr)) {
@@ -60,9 +66,9 @@ int main(void) {
 
 	Shader shader1("shader.vs", "shader.fs");
 	Shader shader2("shader.vs", "shader.fs");
-	Shader shader3("shader.vs", "shader.fs");
-	Shader shader4("shader.vs", "shader.fs");
-	Shader shader5("shader.vs", "shader.fs");
+	Shader shader3("upside_down.shader.vs", "shader.fs");
+	Shader shader4("upside_down.shader.vs", "shader.fs");
+	Shader shader5("upside_down.shader.vs", "shader.fs");
 
 	float t1[18]{
 		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
@@ -175,7 +181,10 @@ int main(void) {
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// for program 2
+		float xoffset = 0.25f, yoffset = -0.5f;
 		shader2.use();
+		shader2.setFloat("xoffset", xoffset);
+		shader2.setFloat("yoffset", yoffset);
 		glBindVertexArray(VAO[1]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		
@@ -232,6 +241,10 @@ void key_callback(GLFWwindow* w, int key, int scancode, int action, int mods) {
 	}
 
 	cout << key_msg << endl;
+}
+
+void cursor_pos_callback(GLFWwindow* w, double x, double y) {
+	std::cout << "Cursor position: (" << x << ", " << y << ")" << endl;
 }
 
 vector<float> random_floats(void) {
