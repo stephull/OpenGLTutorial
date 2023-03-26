@@ -2,6 +2,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
 #include "shader.h"
 
 #include <iostream>
@@ -19,7 +20,7 @@ vector<float> random_floats(void);
 
 vector<float> rgb;
 
-int main(void) {
+int main(int argc, char** argv) {
 	cout << "Hello, world!\n" << endl;
 
 	GLFWwindow* window;
@@ -64,11 +65,21 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	Shader shader1("shader.vs", "shader.fs");
-	Shader shader2("shader.vs", "shader.fs");
-	Shader shader3("upside_down.shader.vs", "shader.fs");
-	Shader shader4("upside_down.shader.vs", "shader.fs");
-	Shader shader5("upside_down.shader.vs", "shader.fs");
+	Shader shader1 = Shader();
+	shader1.Compile("shader.vs", "shader.fs");
+
+	Shader shader2 = Shader();
+	shader2.Compile("shader.vs", "shader.fs");
+
+	Shader shader3 = Shader();
+	shader3.Compile("upside_down_shader.vs", "shader.fs");
+
+	Shader shader4 = Shader();
+	shader4.Compile("upside_down_shader.vs", "shader.fs");
+
+	Shader shader5 = Shader();
+	shader5.Compile("upside_down_shader.vs", "shader.fs");
+
 
 	float t1[18]{
 		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
@@ -176,30 +187,30 @@ int main(void) {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// for program 1
-		shader1.use();
+		shader1.Use();
 		glBindVertexArray(VAO[0]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// for program 2
 		float xoffset = 0.25f, yoffset = -0.5f;
-		shader2.use();
-		shader2.setFloat("xoffset", xoffset);
-		shader2.setFloat("yoffset", yoffset);
+		shader2.Use();
+		shader2.SetFloat("xoffset", xoffset);
+		shader2.SetFloat("yoffset", yoffset);
 		glBindVertexArray(VAO[1]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		
 		// for program 3
-		shader3.use();
+		shader3.Use();
 		glBindVertexArray(VAO[2]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// for program 4
-		shader4.use();
+		shader4.Use();
 		glBindVertexArray(VAO[3]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// for program 5
-		shader5.use();
+		shader5.Use();
 		glBindVertexArray(VAO[4]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -214,6 +225,7 @@ int main(void) {
 	cout << "\nThank you for using this program. Goodbye!" << endl;
 
 	glfwTerminate();
+
 	exit(EXIT_SUCCESS);
 }
 

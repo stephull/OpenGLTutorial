@@ -2,109 +2,38 @@
 #define SHADER_H
 
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
+
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 using namespace std;
 
-using Stream = std::ifstream;
-using StringStream = std::stringstream;
-
 class Shader {
 public:
-	unsigned int ID;
+	unsigned int id;
 
-	Shader(const char* vertPath, const char* fragPath) {
-		string vertCode, fragCode;
-		Stream vsFile, fsFile;
+	Shader() {}
 
-		static constexpr int NG = Stream::failbit | Stream::badbit;
-		vsFile.exceptions(NG);
-		fsFile.exceptions(NG);
+	Shader& Use();
 
-		try {
-			vsFile.open(vertPath);
-			fsFile.open(fragPath);
+	void Compile(const char* vertexSource, const char* fragmentSource, const char* geometrySource = nullptr);
+	
+	void SetFloat(const char* name, float val, bool useShader = false);
+	void SetInteger(const char* name, int val, bool useShader = false);
+	
+	void SetVector2f(const char* name, float x, float y, bool useShader = false);
+	void SetVector2f(const char* name, const glm::vec2& val, bool useShader = false);
 
-			StringStream vsStream, fsStream;
-			vsStream << vsFile.rdbuf();
-			fsStream << fsFile.rdbuf();
+	void SetVector3f(const char* name, float x, float y, float z, bool useShader = false);
+	void SetVector3f(const char* name, const glm::vec3& val, bool useShader = false);
 
-			vsFile.close();
-			fsFile.close();
-
-			vertCode = vsStream.str();
-			fragCode = fsStream.str();
-		}
-		catch (Stream::failure& e) {
-			cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << endl;
-		}
-
-		const char* vsCode = vertCode.c_str();
-		const char* fsCode = fragCode.c_str();
-		
-		unsigned int vertex, fragment;
-		
-		vertex = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertex, 1, &vsCode, nullptr);
-		glCompileShader(vertex);
-		checkCompileErrors(vertex, "VERTEX");
-
-		fragment = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragment, 1, &fsCode, nullptr);
-		glCompileShader(fragment);
-		checkCompileErrors(fragment, "FRAGMENT");
-
-		ID = glCreateProgram();
-		glAttachShader(ID, vertex);
-		glAttachShader(ID, fragment);
-		glLinkProgram(ID);
-		checkCompileErrors(ID, "PROGRAM");
-
-		glDeleteShader(vertex);
-		glDeleteShader(fragment);
-	}
-
-	void use() {
-		glUseProgram(ID);
-	}
-
-	void setBool(const string& name, bool val) const {
-		uint32_t uniform = glGetUniformLocation(ID, name.c_str());
-		glUniform1i(uniform, (int)val);
-	}
-
-	void setInt(const string& name, int val) const {
-		uint32_t uniform = glGetUniformLocation(ID, name.c_str());
-		glUniform1i(uniform, val);
-	}
-
-	void setFloat(const string& name, float val) const {
-		uint32_t uniform = glGetUniformLocation(ID, name.c_str());
-		glUniform1f(uniform, val);
-	}
+	void SetVector4f(const char* name, float x, float y, float z, float a, bool useShader = false);
+	void SetVector4f(const char* name, const glm::vec4& val, bool useShader = false);
+	void SetMatrix4(const char* name, const glm::mat4& mat, bool useShader = false);
 
 private:
-	void checkCompileErrors(unsigned int shader, string type) {
-		int success;
-		char infoLog[1024];
-
-		if (type == "PROGRAM") {
-			glGetProgramiv(shader, GL_LINK_STATUS, &success);
-			if (!success) {
-				glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
-				cout << "ERROR::PROGRAM_LINKED_ERROR of type: " << type << '\n' << infoLog << endl;
-			}
-		}
-		else {
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			if (!success) {
-				glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-				cout << "ERROR::SHADER_COMPILE_ERROR of type: " << type << '\n' << infoLog << endl;
-			}
-		}
-	}
+	void checkCompileErrors(unsigned int object, string type);
 };
 
 #endif
