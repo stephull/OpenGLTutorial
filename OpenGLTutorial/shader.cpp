@@ -138,7 +138,7 @@ void Shader::checkCompileErrors(unsigned int object, string type) {
 		glGetProgramiv(object, GL_LINK_STATUS, &success);
 		if (!success) {
 			glGetProgramInfoLog(object, 1024, nullptr, infoLog);
-			cout << "Shader error: link-time error with type " << type << "\n" << infoLog << '\n' << endl;
+			cout << "Program error: link-time error with type " << type << "\n" << infoLog << '\n' << endl;
 		}
 	}
 	else {

@@ -3,7 +3,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "resource_manager.h"
 #include "shader.h"
+#include "text_renderer.h"
 
 #include <iostream>
 #include <random>
@@ -53,10 +55,6 @@ int main(int argc, char** argv) {
 	}
 
 	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetCursorPosCallback(window, cursor_pos_callback);
 
 	GLADloadproc addr = (GLADloadproc)glfwGetProcAddress;
 	if (!gladLoadGLLoader(addr)) {
@@ -65,21 +63,38 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetKeyCallback(window, key_callback);
+	glfwSetCursorPosCallback(window, cursor_pos_callback);
+
+	glViewport(0, 0, winW, winH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	Shader shader1 = Shader();
-	shader1.Compile("shader.vs", "shader.fs");
+	shader1.Compile("shader.vertex", "shader.fragment");
+
+	cout << "PASS1\n\n" << endl;
 
 	Shader shader2 = Shader();
-	shader2.Compile("shader.vs", "shader.fs");
+	shader2.Compile("shader.vertex", "shader.fragment");
+
+	cout << "PASS2\n\n" << endl;
 
 	Shader shader3 = Shader();
-	shader3.Compile("upside_down_shader.vs", "shader.fs");
+	shader3.Compile("upside_down.shader.vertex", "shader.fragment");
+
+	cout << "PASS3\n\n" << endl;
 
 	Shader shader4 = Shader();
-	shader4.Compile("upside_down_shader.vs", "shader.fs");
+	shader4.Compile("upside_down.shader.vertex", "shader.fragment");
+
+	cout << "PASS4\n\n" << endl;
 
 	Shader shader5 = Shader();
-	shader5.Compile("upside_down_shader.vs", "shader.fs");
+	shader5.Compile("upside_down.shader.vertex", "shader.fragment");
 
+	cout << "PASS5\n\n" << endl;
 
 	float t1[18]{
 		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
@@ -192,10 +207,10 @@ int main(int argc, char** argv) {
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// for program 2
-		float xoffset = 0.25f, yoffset = -0.5f;
+		float x_tmp = 0.25f, y_tmp = -0.5f;
 		shader2.Use();
-		shader2.SetFloat("xoffset", xoffset);
-		shader2.SetFloat("yoffset", yoffset);
+		shader2.SetFloat("xoffset", x_tmp);
+		shader2.SetFloat("yoffset", y_tmp);
 		glBindVertexArray(VAO[1]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		
